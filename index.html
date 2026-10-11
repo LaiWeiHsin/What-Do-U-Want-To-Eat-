@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>今天吃什麼？交給命運</title>
+<style>
+:root{--ray1:#ffe14d;--ray2:#ffd21f;--ink:#111;--onbg:#111;--card:#fff;--pink:#ff3d71;--cyan:#00c2ff}
+@media (prefers-color-scheme:dark){:root{--ray1:#2f1766;--ray2:#26115a;--onbg:#fff}}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;font-weight:700;color:var(--ink);
+background:repeating-conic-gradient(var(--ray1) 0 10deg,var(--ray2) 10deg 20deg) fixed;
+padding:max(14px,env(safe-area-inset-top)) 14px max(20px,env(safe-area-inset-bottom));overflow-x:hidden}
+body.shake{animation:shake .45s}
+@keyframes shake{0%,100%{transform:none}20%{transform:translate(-8px,4px) rotate(-.6deg)}40%{transform:translate(8px,-4px) rotate(.6deg)}60%{transform:translate(-6px,-3px)}80%{transform:translate(6px,3px)}}
+main{max-width:1000px;margin:0 auto;text-align:center}
+h1{margin:6px 0 2px;font-size:clamp(30px,8vw,56px);font-weight:900;color:#fff;letter-spacing:.02em;line-height:1.1;
+-webkit-text-stroke:7px var(--ink);paint-order:stroke fill;text-shadow:4px 5px 0 var(--ink);transform:rotate(-1.5deg)}
+.sub{margin:10px 0 12px;color:var(--onbg);font-size:15px}
+.bar{display:flex;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+button{font:inherit;font-weight:900;color:var(--ink);cursor:pointer;border:4px solid var(--ink);border-radius:14px;background:#fff;
+padding:8px 14px;min-height:48px;box-shadow:4px 4px 0 var(--ink);transition:transform .08s,box-shadow .08s}
+button:hover:not(:disabled){transform:translate(-1px,-1px);box-shadow:6px 6px 0 var(--ink)}
+button:active:not(:disabled){transform:translate(4px,4px);box-shadow:0 0 0 var(--ink)}
+button:disabled{opacity:.55;cursor:not-allowed}
+button:focus-visible{outline:4px solid var(--cyan);outline-offset:3px}
+.cnt[aria-pressed=true]{background:var(--pink);color:#fff}
+.stage{display:grid;gap:18px;align-items:center;justify-items:center}
+@media(min-width:900px){.stage{grid-template-columns:minmax(0,560px) minmax(0,1fr);justify-items:stretch}}
+.wheelbox{position:relative;width:min(92vw,520px);aspect-ratio:1;margin:0 auto}
+canvas{width:100%;height:100%;display:block;border-radius:50%;border:6px solid var(--ink);box-shadow:6px 8px 0 var(--ink);background:#fff}
+#ptr{position:absolute;left:50%;top:-14px;width:0;height:0;margin-left:-22px;border-left:22px solid transparent;border-right:22px solid transparent;
+border-top:46px solid var(--pink);filter:drop-shadow(0 0 0 var(--ink)) drop-shadow(3px 3px 0 var(--ink));transform-origin:50% 0;transition:transform .06s;z-index:2}
+#spin{position:absolute;left:50%;top:50%;width:24%;aspect-ratio:1;margin:0;transform:translate(-50%,-50%);border-radius:50%;
+background:var(--pink);color:#fff;font-size:clamp(20px,6vw,34px);padding:0;z-index:3;box-shadow:3px 4px 0 var(--ink)}
+#spin:hover:not(:disabled),#spin:active:not(:disabled){transform:translate(-50%,-50%) scale(1.05);box-shadow:3px 4px 0 var(--ink)}
+.card{background:var(--card);border:5px solid var(--ink);border-radius:22px;box-shadow:8px 8px 0 var(--ink);padding:20px 16px;min-height:230px;
+display:flex;flex-direction:column;justify-content:center;gap:12px;width:100%;max-width:520px;margin:0 auto}
+.card .big{font-size:clamp(34px,9vw,52px);font-weight:900;line-height:1.15}
+.card .roast{font-size:clamp(16px,4.2vw,20px);line-height:1.6;min-height:3.2em;margin:0}
+.card.pop{animation:pop .5s cubic-bezier(.2,1.6,.4,1)}
+@keyframes pop{from{transform:scale(.4) rotate(-8deg)}to{transform:none}}
+.acts{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.acts .a{background:var(--cyan)}.acts .b{background:#ffd60a}
+.hint{opacity:.7;font-weight:700}
+.ex{margin-top:14px;color:var(--onbg);font-size:14px;min-height:44px}
+.ex button{min-height:36px;padding:2px 10px;box-shadow:2px 2px 0 var(--ink);font-size:14px;margin-left:6px}
+#toast{position:fixed;left:50%;bottom:max(24px,env(safe-area-inset-bottom));transform:translate(-50%,40px);background:var(--ink);color:#fff;
+padding:10px 18px;border-radius:12px;opacity:0;transition:.25s;pointer-events:none;z-index:9}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+.cf{position:fixed;top:-30px;font-size:28px;pointer-events:none;z-index:8;animation:fall 1.8s ease-in forwards}
+@keyframes fall{to{transform:translateY(110vh) rotate(540deg);opacity:.9}}
+@media(prefers-reduced-motion:reduce){body.shake{animation:none}.card.pop{animation:none}button,#ptr{transition:none}}
+</style>
+</head>
+<body>
+<main>
+  <h1>今天吃什麼？交給命運</h1>
+  <p class="sub">選擇障礙救星，按下去就不准再想了</p>
+  <div class="bar">
+    <button class="cnt" data-n="6" aria-pressed="false">6 格</button>
+    <button class="cnt" data-n="8" aria-pressed="true">8 格</button>
+    <button class="cnt" data-n="12" aria-pressed="false">12 格</button>
+    <button id="mute" aria-pressed="false" aria-label="音效開關">🔊</button>
+    <button id="share">分享網站</button>
+  </div>
+  <div class="stage">
+    <div class="wheelbox">
+      <div id="ptr"></div>
+      <canvas id="cv" aria-label="食物轉盤"></canvas>
+      <button id="spin">轉！</button>
+    </div>
+    <div>
+      <div class="card" id="card" aria-live="polite">
+        <div class="big">🤔</div>
+        <p class="roast hint">按下中間的「轉！」或空白鍵，剩下的交給命運。</p>
+      </div>
+      <div class="ex" id="ex"></div>
+    </div>
+  </div>
+</main>
+<div id="toast"></div>
+<script>
+const F=`🍚|滷肉飯|又是它？你的人生是不是也只有這一個選項。
+🍗|雞肉飯|雞肉飯，平凡但穩定，跟你的存款一樣。
+🍱|排骨便當|排骨便當，吃完下午照樣想離職。
+🍱|雞腿便當|雞腿便當，吃完記得假裝很有活力。
+🥘|燒臘飯|叉燒配白飯，快樂其實很便宜。
+🍲|鹹粥|鹹粥，適合昨天亂吃的你。
+🍙|飯糰|飯糰，一手拿著就能邊逃避人生。
+🍜|牛肉麵|今天的你，值得一碗配得上你糾結時間的湯。
+🍜|乾拌麵|乾拌麵，因為你連湯都懶得選。
+🥟|水餃|水餃，包的是餡，吃的是命運。
+🥟|鍋貼|鍋貼，外酥內軟，像你假裝堅強的樣子。
+🥟|小籠包|小籠包，小心燙，別像上次一樣。
+🥘|麻辣燙|麻辣燙，錢包辣，心更辣。
+🍲|火鍋|火鍋，一個人吃就當作養生。
+🍗|鹽酥雞|減肥計畫已讀不回。
+🍗|炸雞排|炸雞排，比你的想法大塊多了。
+🦪|蚵仔煎|蚵仔煎，再糾結蚵仔都涼了。
+🧀|臭豆腐|臭豆腐，吃完請勿靠近同事。
+🍢|滷味|滷味，夾著夾著就破產了。
+🥚|蛋餅|蛋餅，一個蛋餅配一個奇蹟的早晨。
+🍽️|自助餐|自助餐，選擇障礙的終極挑戰。
+🍜|日式拉麵|拉麵，連湯都喝光你就是贏家。
+🍣|壽司|壽司，一盤一盤吃，錢也一盤一盤飛。
+🍛|咖哩飯|咖哩飯，沒有人會拒絕咖哩，包括你。
+🍚|丼飯|丼飯，一碗搞定，省得再想。
+🍗|韓式炸雞|韓式炸雞，今天先不管熱量。
+🍲|部隊鍋|部隊鍋，泡麵加火腿，但很高級。
+🥩|燒肉|燒肉，錢包準備好，心臟也是。
+🍜|越式河粉|河粉，清爽，假裝今天很自律。
+🍛|泰式打拋豬|打拋豬飯，加蛋，沒有商量。
+🍕|披薩|披薩是圓的，就像你的決定。
+🍔|漢堡|漢堡，一口吞下所有煩惱。
+🍝|義大利麵|義大利麵，叉子轉啊轉，跟你的腦袋一樣。
+🥪|早午餐|早午餐，花錢買一張好看的照片。
+🌯|墨西哥捲餅|捲餅，裡面包什麼都不重要，開心就好。
+🏪|便利商店|恭喜，你把選擇障礙轉移到了貨架前。`.split('\n').map(l=>{const[e,n,r]=l.split('|');return{e,n,r}});
+const G=["宇宙正在注視著你的午餐。","吃就對了，別再問了，問就是都可以。","轉盤不負責任，但負責好笑。","你的錢包：我不同意，但我沒有投票權。","這是命運的安排，不接受客訴。","再猶豫下去，連便利商店都要打烊了。","別看我，我也不知道你到底想吃什麼。","你不是不知道，你只是想讓我背鍋。","今天的你，勇敢地把人生交給了圓盤。","這個選擇，連你的胃都點頭了。","這一餐，註定載入史冊（才怪）。","轉盤說了算，不服來戰。","餓著做決定的人，都不太冷靜。","科學證明：吃飽才有力氣糾結明天。","這個結果，由一個圓盤獨家贊助。","你的減肥計畫：已讀不回。","你問了我三次，我答了三次，都是命。","據說吃完這個會心情變好，據說。","今日運勢：宜吃飯，忌再轉。","恭喜你，終於不用再想了。"];
+const ESC={3:"你是在選食物，還是在選對象？",5:"轉盤累了，你的胃不累嗎？",7:"好，我宣布你就是想吃全部。"};
+const COL=['#ff3d71','#ffd60a','#00c2ff','#7cff4d','#ff8a00','#b967ff'];
+const $=s=>document.querySelector(s),cv=$('#cv'),ctx=cv.getContext('2d'),card=$('#card'),spinBtn=$('#spin');
+const RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
+let n=8,items=[],ex=new Set(),rot=0,busy=false,muted=false,streak=0,lastT=0,cur=null,lastRoast='',ac=null,size=0;
+const avail=()=>F.filter(f=>!ex.has(f));
+const shuf=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+function deal(){items=shuf(avail()).slice(0,n);draw()}
+function fit(){const w=cv.clientWidth,d=devicePixelRatio||1;size=w;cv.width=cv.height=Math.round(w*d);ctx.setTransform(d,0,0,d,0,0);draw()}
+function draw(){
+  if(!size)return;const R=size/2,k=items.length,a=2*Math.PI/Math.max(k,1);
+  ctx.clearRect(0,0,size,size);ctx.save();ctx.translate(R,R);ctx.rotate(rot);
+  items.forEach((f,i)=>{
+    let c=i%6;if(i===k-1&&c===0&&k>1)c=3;
+    ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,R,i*a-.002,(i+1)*a+.002);ctx.closePath();
+    ctx.fillStyle=COL[c];ctx.fill();ctx.lineWidth=3;ctx.strokeStyle='#111';ctx.stroke();
+    ctx.save();ctx.rotate((i+.5)*a);ctx.textAlign='right';ctx.textBaseline='middle';ctx.fillStyle='#111';
+    const base=k>=12?.095:k>=8?.115:.13,fs=Math.min(base*R*2/2,(.66*R)/(f.n.length+1.3));
+    ctx.font='900 '+fs+'px "Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif';
+    ctx.fillText(f.n+' '+f.e,R*.93,0);ctx.restore();
+  });
+  ctx.restore();
+}
+function snd(){
+  if(muted)return;try{ac=ac||new(window.AudioContext||window.webkitAudioContext)();if(ac.state==='suspended')ac.resume()}catch(e){}
+}
+function tone(f,t0,d,type,v){
+  if(muted||!ac)return;const o=ac.createOscillator(),g=ac.createGain();o.type=type||'square';o.frequency.value=f;
+  g.gain.setValueAtTime(v||.06,ac.currentTime+t0);g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+t0+d);
+  o.connect(g).connect(ac.destination);o.start(ac.currentTime+t0);o.stop(ac.currentTime+t0+d+.02);
+}
+const tick=()=>tone(900+Math.random()*120,0,.03,'square',.04);
+const win=()=>{[523,659,784,1047].forEach((f,i)=>tone(f,i*.1,.25,'triangle',.12));tone(130,.45,.35,'sawtooth',.1)};
+function showMsg(big,msg,btns){
+  card.classList.remove('pop');void card.offsetWidth;card.classList.add('pop');
+  card.innerHTML='<div class="big"></div><p class="roast"></p><div class="acts"></div>';
+  card.children[0].textContent=big;card.children[1].textContent=msg;
+  btns.forEach(([t,cls,fn])=>{const b=document.createElement('button');b.textContent=t;b.className=cls;b.onclick=fn;card.children[2].appendChild(b)});
+}
+function lock(v){busy=v;spinBtn.disabled=v;document.querySelectorAll('.cnt,#card button').forEach(b=>b.disabled=v)}
+function spin(){
+  if(busy)return;snd();
+  if(avail().length<=1){return exhausted()}
+  if(!items.length)deal();
+  const now=Date.now();streak=now-lastT<60000?streak+1:1;lastT=now;
+  const w=Math.random()*items.length|0,k=items.length,a=2*Math.PI/k;
+  const tgt=-Math.PI/2-(w+.5+(Math.random()-.5)*.7)*a,start=rot;
+  let d=((tgt-start)%(2*Math.PI)+2*Math.PI)%(2*Math.PI)+2*Math.PI*(RM?2:5+(Math.random()*2|0));
+  const dur=RM?1500:5200,t0=performance.now();let last=Math.floor((-Math.PI/2-start)/a);
+  lock(true);card.innerHTML='<div class="big">🌀</div><p class="roast hint">命運運轉中……</p>';
+  (function f(t){
+    const p=Math.min(1,(t-t0)/dur),e=1-Math.pow(1-p,4);rot=start+d*e;draw();
+    const s=Math.floor((-Math.PI/2-rot)/a);if(s!==last){last=s;tick();if(!RM){$('#ptr').style.transform='rotate(-14deg)';setTimeout(()=>$('#ptr').style.transform='',70)}}
+    if(p<1)requestAnimationFrame(f);else done(items[w]);
+  })(t0);
+}
+function roast(f){
+  if(ESC[streak])return ESC[streak];
+  let r=Math.random()<.3?G[Math.random()*G.length|0]:f.r;
+  if(r===lastRoast)r=G[Math.random()*G.length|0];
+  return r;
+}
+function done(f){
+  cur=f;lock(false);lastRoast=roast(f);win();
+  showMsg(f.e+' '+f.n,lastRoast,[['再轉一次','a',spin],['這個不要','b',reject]]);
+  if(!RM){document.body.classList.add('shake');setTimeout(()=>document.body.classList.remove('shake'),450);confetti()}
+}
+function reject(){
+  if(busy||!cur)return;ex.add(cur);
+  const i=items.indexOf(cur),spare=shuf(avail().filter(f=>!items.includes(f)))[0];
+  if(spare)items[i]=spare;else items.splice(i,1);
+  draw();renderEx();
+  if(avail().length<=1)return exhausted();
+  setTimeout(spin,250);
+}
+function exhausted(){
+  items=avail();draw();
+  showMsg('🌬️','你已經把全世界的食物都拒絕光了，去吃空氣吧。',[['全部重來','a',resetEx]]);
+}
+function resetEx(){ex.clear();renderEx();deal();cur=null;card.innerHTML='<div class="big">🤔</div><p class="roast hint">食物都回來了，再轉一次吧。</p>'}
+function renderEx(){
+  const e=$('#ex');e.textContent='';if(!ex.size)return;
+  e.append('已排除 '+ex.size+' 項');const b=document.createElement('button');b.textContent='全部重來';b.onclick=()=>{if(!busy)resetEx()};e.appendChild(b);
+}
+function confetti(){
+  const E=['🎉','🍜','🍗','✨','🍚','🥟','🎊'];
+  for(let i=0;i<28;i++){const s=document.createElement('span');s.className='cf';s.textContent=E[i%E.length];
+    s.style.left=Math.random()*100+'vw';s.style.animationDelay=Math.random()*.4+'s';document.body.appendChild(s);setTimeout(()=>s.remove(),2400)}
+}
+function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('on');setTimeout(()=>e.classList.remove('on'),2200)}
+document.querySelectorAll('.cnt').forEach(b=>b.onclick=()=>{
+  if(busy)return;n=+b.dataset.n;document.querySelectorAll('.cnt').forEach(x=>x.setAttribute('aria-pressed',x===b));
+  snd();tone(600,0,.05);deal();
+});
+$('#mute').onclick=e=>{muted=!muted;e.currentTarget.textContent=muted?'🔇':'🔊';e.currentTarget.setAttribute('aria-pressed',muted);if(!muted){snd();tone(700,0,.06)}};
+$('#share').onclick=async()=>{
+  snd();tone(700,0,.05);const url=location.href,text='選擇障礙救星：今天吃什麼？交給命運';
+  if(navigator.share){try{await navigator.share({title:document.title,text,url})}catch(e){}return}
+  try{await navigator.clipboard.writeText(url);toast('網址已複製，快去拖朋友下水')}catch(e){prompt('複製這個網址傳給朋友：',url)}
+};
+spinBtn.onclick=spin;
+document.addEventListener('keydown',e=>{if(e.code==='Space'&&!(document.activeElement&&document.activeElement.tagName==='BUTTON')){e.preventDefault();spin()}});
+addEventListener('resize',fit);
+deal();fit();
+</script>
+</body>
+</html>
